@@ -32,8 +32,8 @@ jobs:
         run: |
           cat > .env <<'EOF'
           HOPSWORKS_API_KEY=${{ secrets.HOPSWORKS_API_KEY }}
-          HOPSWORKS_PROJECT="Air_Q"   
-          HOPSWORKS_HOST=YOUR-TENANT.app.hopsworks.ai
+          HOPSWORKS_PROJECT=Air_Q   
+          HOPSWORKS_HOST=c.app.hopsworks.ai/p/1279150/view
           AQICN_API_KEY=${{ secrets.AQICN_API_KEY }}
           AQICN_COUNTRY=Sweden
           AQICN_CITY=Uppsala
