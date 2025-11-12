@@ -1,75 +1,54 @@
-here is all the code, open in canva and make it right name: air-quality-daily
+name: air-quality-daily
 
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: '11 6 * * *'   # optional: runs 06:11 UTC daily
+    #schedule:
+    #- cron: '11 6 * * *'
 
 jobs:
   schedule_pipelines:
     runs-on: ubuntu-latest
+
     permissions:
-      contents: write   # needed for git auto commit
-      pages: write      # harmless if unused
+      pages: write
+      contents: write
 
     steps:
-      - name: Checkout repo
+      - name: checkout repo content
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: setup python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
-
-      - name: Install Python packages
+      - name: install python packages
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Sanity check Hopsworks login
+
+      - name: execute python workflows from bash script
+        env:
+          HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
         run: |
-          python - <<'PY'
-          from mlfs import config
-          import hopsworks
-          s = config.HopsworksSettings(_env_file=".env")
-          print("Host:", s.HOPSWORKS_HOST)
-          print("Project:", s.HOPSWORKS_PROJECT)
-          hopsworks.login(
-            project=s.HOPSWORKS_PROJECT,
-            host=s.HOPSWORKS_HOST,
-            api_key_value=s.HOPSWORKS_API_KEY.get_secret_value(),
-            engine="python",
-          )
-          print("Login OK")
-          PY
-
-
-      # --- IMPORTANT: create .env for the Makefile / HopsworksSettings ---
-      - name: Create .env for Makefile
-        run: |
-          cat > .env <<'EOF'
-          HOPSWORKS_PROJECT="YOUR EXACT PROJECT NAME"
-          HOPSWORKS_HOST=myteam.app.hopsworks.ai
-          HOPSWORKS_API_KEY=${{ secrets.HOPSWORKS_API_KEY }}
-          AQICN_API_KEY=${{ secrets.AQICN_API_KEY }}
-          AQICN_COUNTRY=Sweden
-          AQICN_CITY=Uppsala
-          AQICN_STREET=uppsala-kungsgatan-67
-          AQICN_URL=https://api.waqi.info/feed/@10015/
-          EOF
-
-
-      - name: Run batch inference
-        run: make aq-inference   # or make feature-daily / make train
-
-      - name: Commit dashboard assets
+          ipython notebooks/airquality/2_air_quality_feature_pipeline.ipynb
+          ipython notebooks/airquality/4_air_quality_batch_inference.ipynb
+      - name: github pages publish
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Air Quality Dashboard published"
+          commit_options: '--no-verify --signoff'
+
           file_pattern: 'docs/air-quality/assets/img/* docs/_includes/*'
+
           repository: .
+
           status_options: '--untracked-files=no'
+
           skip_dirty_check: true
+
           skip_fetch: true
+
           skip_checkout: true
+
           push_options: '--force'
