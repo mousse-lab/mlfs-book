@@ -55,7 +55,7 @@ jobs:
           AQICN_COUNTRY=Sweden
           AQICN_CITY=Uppsala
           AQICN_STREET=uppsala-kungsgatan-67
-          AQICN_URL=https://aqicn.org/city/sweden/uppsala/kungsgatan-67/
+          AQICN_URL=https://api.waqi.info/feed/@10015/
           EOF
 
 
