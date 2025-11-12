@@ -29,17 +29,20 @@ jobs:
       - name: Sanity check Hopsworks login
         run: |
           python - <<'PY'
-          import os, hopsworks
-          print("Host:", os.environ["HOPSWORKS_HOST"])
-          print("Project:", os.environ["HOPSWORKS_PROJECT"])
+          from mlfs import config
+          import hopsworks
+          s = config.HopsworksSettings(_env_file=".env")
+          print("Host:", s.HOPSWORKS_HOST)
+          print("Project:", s.HOPSWORKS_PROJECT)
           hopsworks.login(
-            project=os.environ["HOPSWORKS_PROJECT"],
-            host=os.environ["HOPSWORKS_HOST"],
-            api_key_value=os.environ["HOPSWORKS_API_KEY"],
-            engine="python"
+            project=s.HOPSWORKS_PROJECT,
+            host=s.HOPSWORKS_HOST,
+            api_key_value=s.HOPSWORKS_API_KEY.get_secret_value(),
+            engine="python",
           )
           print("Login OK")
           PY
+
 
       # --- IMPORTANT: create .env for the Makefile / HopsworksSettings ---
       - name: Create .env for Makefile
