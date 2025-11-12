@@ -1,74 +1,85 @@
 name: air-quality-daily
 
 on:
-  workflow_dispatch:
-  # schedule:
-  #   - cron: '11 6 * * *'   # optional: runs 06:11 UTC daily
+workflow_dispatch:
+
+# schedule:
+
+# - cron: '11 6 * * *'   # optional: runs 06:11 UTC daily
 
 jobs:
-  schedule_pipelines:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write   # needed for git auto commit
-      pages: write      # harmless if unused
+schedule_pipelines:
+runs-on: ubuntu-latest
+permissions:
+contents: write   # needed for git auto commit
+pages: write      # harmless if unused
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+```
+steps:
+  - name: Checkout repo
+    uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
+  - name: Setup Python
+    uses: actions/setup-python@v5
+    with:
+      python-version: '3.11'
+      cache: 'pip'
 
-      - name: Install Python packages
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Sanity check Hopsworks login
-        run: |
-          python - <<'PY'
-          from mlfs import config
-          import hopsworks
-          s = config.HopsworksSettings(_env_file=".env")
-          print("Host:", s.HOPSWORKS_HOST)
-          print("Project:", s.HOPSWORKS_PROJECT)
-          hopsworks.login(
-            project=s.HOPSWORKS_PROJECT,
-            host=s.HOPSWORKS_HOST,
-            api_key_value=s.HOPSWORKS_API_KEY.get_secret_value(),
-            engine="python",
-          )
-          print("Login OK")
-          PY
+  - name: Install Python packages
+    run: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
 
+  # --- IMPORTANT: create .env for HopsworksSettings and Makefile ---
+  # Replace YOUR EXACT PROJECT NAME and myteam.app.hopsworks.ai with your real values.
+  # Ensure repo secrets HOPSWORKS_API_KEY and AQICN_API_KEY exist.
+  - name: Create .env for Makefile
+    shell: bash
+    run: |
+      {
+        echo 'HOPSWORKS_PROJECT="YOUR EXACT PROJECT NAME"'
+        echo 'HOPSWORKS_HOST=myteam.app.hopsworks.ai'
+        echo 'HOPSWORKS_API_KEY=${{ secrets.HOPSWORKS_API_KEY }}'
+        echo 'AQICN_API_KEY=${{ secrets.AQICN_API_KEY }}'
+        echo 'AQICN_COUNTRY=Sweden'
+        echo 'AQICN_CITY=Uppsala'
+        echo 'AQICN_STREET=uppsala-kungsgatan-67'
+        echo 'AQICN_URL=https://aqicn.org/city/sweden/uppsala/kungsgatan-67/'
+      } > .env
+      # Safe peek (no secrets)
+      grep -E '^(HOPSWORKS_PROJECT|HOPSWORKS_HOST|AQICN_CITY|AQICN_COUNTRY)=' .env || true
 
-      # --- IMPORTANT: create .env for the Makefile / HopsworksSettings ---
-      - name: Create .env for Makefile
-        run: |
-          cat > .env <<'EOF'
-          HOPSWORKS_API_KEY=${{ secrets.HOPSWORKS_API_KEY }}
-          HOPSWORKS_PROJECT=Air_Q   
-          HOPSWORKS_HOST=c.app.hopsworks.ai/p/1279150/view
-          AQICN_API_KEY=${{ secrets.AQICN_API_KEY }}
-          AQICN_COUNTRY=Sweden
-          AQICN_CITY=Uppsala
-          AQICN_STREET=uppsala-kungsgatan-67
-          AQICN_URL=https://aqicn.org/city/sweden/uppsala/kungsgatan-67/
-          EOF
+  - name: Sanity check Hopsworks login
+    run: |
+      python - <<'PY'
+      from mlfs import config
+      import hopsworks, pathlib
+      p = pathlib.Path('.').resolve() / '.env'
+      print('Using .env at:', p)
+      s = config.HopsworksSettings(_env_file=str(p))
+      print('Host:', s.HOPSWORKS_HOST)
+      print('Project:', s.HOPSWORKS_PROJECT)
+      hopsworks.login(
+        project=s.HOPSWORKS_PROJECT,
+        host=s.HOPSWORKS_HOST,
+        api_key_value=s.HOPSWORKS_API_KEY.get_secret_value(),
+        engine='python',
+      )
+      print('Login OK')
+      PY
 
-      - name: Run batch inference
-        run: make aq-inference   # or make feature-daily / make train
+  - name: Run batch inference
+    run: make aq-inference   # or: make feature-daily / make train
 
-      - name: Commit dashboard assets
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Air Quality Dashboard published"
-          file_pattern: 'docs/air-quality/assets/img/* docs/_includes/*'
-          repository: .
-          status_options: '--untracked-files=no'
-          skip_dirty_check: true
-          skip_fetch: true
-          skip_checkout: true
-          push_options: '--force'
+  - name: Commit dashboard assets
+    uses: stefanzweifel/git-auto-commit-action@v5
+    with:
+      commit_message: "Air Quality Dashboard published"
+      file_pattern: 'docs/air-quality/assets/img/* docs/_includes/*'
+      repository: .
+      status_options: '--untracked-files=no'
+      skip_dirty_check: true
+      skip_fetch: true
+      skip_checkout: true
+      push_options: '--force'
+```
